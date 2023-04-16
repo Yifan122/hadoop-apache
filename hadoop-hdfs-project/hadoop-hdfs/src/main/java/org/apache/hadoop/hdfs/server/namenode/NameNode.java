@@ -137,8 +137,8 @@ import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
  * is a second backup/failover NameNode, or when using federated NameNodes.)
  *
  * The NameNode controls two critical tables:
- *   1)  filename->blocksequence (namespace)
- *   2)  block->machinelist ("inodes")
+ *   1)  filename->blocksequence (namespace) 文件与文件块（block）的关系， 这张表存储在了磁盘上面
+ *   2)  block->machinelist ("inodes") ： 文件块与之间的关系，每次NameNode 重启后会重新构建出来
  *
  * The first table is stored on disk and is very precious.
  * The second table is rebuilt every time the NameNode comes up.
@@ -148,6 +148,17 @@ import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
  * management.  The majority of the 'NameNode' class itself is concerned
  * with exposing the IPC interface and the HTTP server to the outside world,
  * plus some configuration management.
+ *
+ *  NameNode 服务是由三个重要的类支撑的：
+ *  1）NameNode类：
+ *    管理配置的参数：hdfs-site.xml, core-site.xml
+ *  2) NameNode Server:
+ *     IPC server:
+ *        NameNodeRPCServer: 开放端口，等待别人调用，比如：8020/9000
+ *     HTTP server：
+ *        NameNodeHttpServer: 开放50070界面，我们可以通过这个界面了解HDFS的情况
+ *   3）FSNameSystem:
+ *    这个类很重要，管理了HDFS的元数据
  *
  * NameNode implements the
  * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol} interface, which
@@ -635,13 +646,18 @@ public class NameNode implements NameNodeStatusMXBean {
     StartupProgressMetrics.register(startupProgress);
 
     if (NamenodeRole.NAMENODE == role) {
+      // TODO 启动HttpServer
       startHttpServer(conf);
     }
 
     this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
 
+    /**
+     * TODO 加载元数据
+     */
     loadNamesystem(conf);
 
+    // TODO 启动RPCserver
     rpcServer = createRpcServer(conf);
     if (clientNamenodeAddress == null) {
       // This is expected for MiniDFSCluster. Set it now using 
@@ -659,7 +675,9 @@ public class NameNode implements NameNodeStatusMXBean {
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
-    
+    // TODO 启动一些公共的服务。NameNode RPC的服务就是在里面启动的
+    // 1）进行资源检查，检查是否有磁盘足够存储元数据
+    // 2）进入安全模式检查，检查是否可以退出安全模式
     startCommonServices(conf);
   }
   
@@ -674,6 +692,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   /** Start the services common to active and standby states */
   private void startCommonServices(Configuration conf) throws IOException {
+    // TODO 元数据管理
     namesystem.startCommonServices(conf, haContext);
     registerNNSMXBean();
     if (NamenodeRole.NAMENODE != role) {
@@ -807,6 +826,7 @@ public class NameNode implements NameNodeStatusMXBean {
     this.haContext = createHAContext();
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
+      // TODO 初始化代码
       initialize(conf);
       try {
         haContext.writeLock();
@@ -1416,11 +1436,19 @@ public class NameNode implements NameNodeStatusMXBean {
     LOG.info("createNameNode " + Arrays.asList(argv));
     if (conf == null)
       conf = new HdfsConfiguration();
+    /**
+     * 操作HDFS集群的时候会传进来如下的参数：
+     *
+     * hdfs namenode -format
+     *
+     * hadoop-daemon.sh start namenode
+     */
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage(System.err);
       return null;
     }
+
     setStartupOption(conf, startOpt);
 
     switch (startOpt) {
@@ -1550,6 +1578,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
     try {
       StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
+      // TODO 创建NameNode 的核心代码
       NameNode namenode = createNameNode(argv, null);
       if (namenode != null) {
         namenode.join();

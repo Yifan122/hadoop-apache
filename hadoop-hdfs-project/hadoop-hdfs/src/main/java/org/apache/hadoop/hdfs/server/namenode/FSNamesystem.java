@@ -973,6 +973,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // We shouldn't be calling saveNamespace if we've come up in standby state.
       MetaRecoveryContext recovery = startOpt.createRecoveryContext();
       final boolean staleImage
+              // namenode 启动
+              // fsimage + editlog = new fsImage
+              // TODO (1)合并元数据
           = fsImage.recoverTransitionRead(startOpt, this, recovery);
       if (RollingUpgradeStartupOption.ROLLBACK.matches(startOpt) ||
           RollingUpgradeStartupOption.DOWNGRADE.matches(startOpt)) {
@@ -983,6 +986,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           + " (staleImage=" + staleImage + ", haEnabled=" + haEnabled
           + ", isRollingUpgrade=" + isRollingUpgrade() + ")");
       if (needToSave) {
+        // TODO (2) 把合并出来的新的fsimage写到我们的磁盘上面
         fsImage.saveNamespace(this);
       } else {
         updateStorageVersionForRollingUpgrade(fsImage.getLayoutVersion(),
@@ -996,6 +1000,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // we shouldn't do it when coming up in standby state
       if (!haEnabled || (haEnabled && startOpt == StartupOption.UPGRADE)
           || (haEnabled && startOpt == StartupOption.UPGRADEONLY)) {
+        // TODO (3) 打开新的editlog开始写日志
         fsImage.openEditLogForWrite();
       }
       success = true;
@@ -1049,19 +1054,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   
   /** 
    * Start services common to both active and standby states
+   * 1） fsimage -> 目录，磁盘存储够不够（100M）
+   * 2）editlog -> 目录，磁盘存储够不够
    */
   void startCommonServices(Configuration conf, HAContext haContext) throws IOException {
     this.registerMBean(); // register the MBean for the FSNamesystemState
     writeLock();
     this.haContext = haContext;
     try {
+      // NameNode资源检查 通过hdfs-site.xml, core-site.xml 两个文件找到fsimage, editlog的目录
       nnResourceChecker = new NameNodeResourceChecker(conf);
+      // 判断路径是否有足够的可用空间
       checkAvailableResources();
       assert safeMode != null && !isPopulatingReplQueues();
       StartupProgress prog = NameNode.getStartupProgress();
       prog.beginPhase(Phase.SAFEMODE);
       prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
         getCompleteBlocksTotal());
+      // TODO 设置安全模式
       setBlockTotal();
       blockManager.activate(conf);
     } finally {
@@ -5264,6 +5274,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     /** 
      * There is no need to enter safe mode 
      * if DFS is empty or {@link #threshold} == 0
+     * TODO 触发安全模式的三个条件：
+     * 1. complete block的个数高于threshold
+     * 2， datanode的个数高于 DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY = "dfs.namenode.safemode.min.datanodes"
+     * 3. 存放fsimage editlog的目录下面的大小高于100m
      */
     private boolean needEnter() {
       return (threshold != 0 && blockSafe < blockThreshold) ||
@@ -5272,7 +5286,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
       
     /**
-     * Check and trigger safe mode if needed. 
+     * Check and trigger safe mode if needed.
+     * TODO 检查是否进入安全模式
      */
     private void checkMode() {
       // Have to have write-lock since leaving safemode initializes
@@ -5283,6 +5298,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       // if smmthread is already running, the block threshold must have been 
       // reached before, there is no need to enter the safe mode again
+      // TODO needEnter =》 检查是否进入安全模式
       if (smmthread == null && needEnter()) {
         enter();
         // check if we are ready to initialize replication queues
@@ -5344,6 +5360,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      */
     private synchronized void incrementSafeBlockCount(short replication) {
       if (replication == safeReplication) {
+        // datanode 会进行block的汇报
+        // 每次汇报后blocksafe就会 自增
         this.blockSafe++;
 
         // Report startup progress only if we haven't completed startup yet.
@@ -5679,6 +5697,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
       return;
+    // getCompleteBlocksTotal 获取所有正常的block的个数
     safeMode.setBlockTotal((int)getCompleteBlocksTotal());
   }
 
@@ -5694,6 +5713,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the total number of COMPLETE blocks in the system.
    * For safe mode only complete blocks are counted.
+   *
+   * TODO 在HDFS集群里面block的状态分为两种类型
+   * 1）complete类型：正常的可用的block
+   * 2）underconstruction类型： 处于正在构建的block
    */
   private long getCompleteBlocksTotal() {
     // Calculate number of blocks under construction
