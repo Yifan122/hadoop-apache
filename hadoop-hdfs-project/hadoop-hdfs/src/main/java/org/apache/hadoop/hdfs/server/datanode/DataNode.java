@@ -245,7 +245,7 @@ import com.google.protobuf.BlockingService;
  *
  **********************************************************/
 @InterfaceAudience.Private
-public class DataNode extends ReconfigurableBase
+public class  DataNode extends ReconfigurableBase
     implements InterDatanodeProtocol, ClientDatanodeProtocol,
         TraceAdminProtocol, DataNodeMXBean {
   public static final Log LOG = LogFactory.getLog(DataNode.class);
@@ -431,6 +431,7 @@ public class DataNode extends ReconfigurableBase
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
+      // TODO 启动datanode
       startDataNode(conf, dataDirs, resources);
     } catch (IOException ie) {
       shutdown();
@@ -817,6 +818,8 @@ public class DataNode extends ReconfigurableBase
           new ClientDatanodeProtocolServerSideTranslatorPB(this);
     BlockingService service = ClientDatanodeProtocolService
         .newReflectiveBlockingService(clientDatanodeProtocolXlator);
+
+    // RPC初始化
     ipcServer = new RPC.Builder(conf)
         .setProtocol(ClientDatanodeProtocolPB.class)
         .setInstance(service)
@@ -924,6 +927,8 @@ public class DataNode extends ReconfigurableBase
     streamingAddr = tcpPeerServer.getStreamingAddr();
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
+
+    // TODO DataXceiverServer 是用来接收客户端和其他DataNode传过来数据的服务
     xserver = new DataXceiverServer(tcpPeerServer, conf, this);
     this.dataXceiverServer = new Daemon(threadGroup, xserver);
     this.threadGroup.setDaemon(true); // auto destroy when empty
@@ -1130,7 +1135,9 @@ public class DataNode extends ReconfigurableBase
     
     // global DN settings
     registerMXBean();
+    // TODO 初始化DataXceiverServer
     initDataXceiver(conf);
+    // TODO 初始化HttpServer服务
     startInfoServer(conf);
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
@@ -1142,12 +1149,17 @@ public class DataNode extends ReconfigurableBase
     dnUserName = UserGroupInformation.getCurrentUser().getShortUserName();
     LOG.info("dnUserName = " + dnUserName);
     LOG.info("supergroup = " + supergroup);
+    // TODO 初始化RPC
     initIpcServer(conf);
 
     metrics = DataNodeMetrics.create(conf, getDisplayName());
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
-    
+
+    // TODO 初始化BlockPoolManager
     blockPoolManager = new BlockPoolManager(this);
+    //TODO 重要
+    // 1）向namenode注册
+    // 2）向namenode汇报心跳
     blockPoolManager.refreshNamenodes(conf);
 
     // Create the ReadaheadPool from the DataNode context so we can
@@ -2288,6 +2300,7 @@ public class DataNode extends ReconfigurableBase
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFS_DATANODE_KEYTAB_FILE_KEY,
         DFS_DATANODE_KERBEROS_PRINCIPAL_KEY);
+    // TODO 重点
     return makeInstance(dataLocations, conf, resources);
   }
 
@@ -2335,6 +2348,7 @@ public class DataNode extends ReconfigurableBase
   @InterfaceAudience.Private
   public static DataNode createDataNode(String args[], Configuration conf,
       SecureResources resources) throws IOException {
+    // TODO 实例化datanode
     DataNode dn = instantiateDataNode(args, conf, resources);
     if (dn != null) {
       dn.runDatanodeDaemon();
@@ -2401,6 +2415,7 @@ public class DataNode extends ReconfigurableBase
     DefaultMetricsSystem.initialize("DataNode");
 
     assert locations.size() > 0 : "number of data directories should be > 0";
+    // TODO 重要
     return new DataNode(conf, locations, resources);
   }
 

@@ -216,6 +216,7 @@ class BPServiceActor implements Runnable {
 
   private void connectToNNAndHandshake() throws IOException {
     // get NN proxy
+    // TODO 获取服务端的代理
     bpNamenode = dn.connectToNN(nnAddr);
 
     // First phase of the handshake with NN - get the namespace
@@ -228,6 +229,7 @@ class BPServiceActor implements Runnable {
     bpos.verifyAndSetNamespaceInfo(nsInfo);
     
     // Second phase of the handshake with the NN.
+    // TODO 注册
     register(nsInfo);
   }
 
@@ -795,6 +797,7 @@ class BPServiceActor implements Runnable {
   void register(NamespaceInfo nsInfo) throws IOException {
     // The handshake() phase loaded the block pool storage
     // off disk - so update the bpRegistration object from that info
+    // TODO 创建注册信息（clusterId， ip， port等信息）
     bpRegistration = bpos.createRegistration();
 
     LOG.info(this + " beginning handshake with NN");
@@ -802,6 +805,8 @@ class BPServiceActor implements Runnable {
     while (shouldRun()) {
       try {
         // Use returned registration from namenode with updated fields
+
+        // 注册datanode，方法的实现是在服务端
         bpRegistration = bpNamenode.registerDatanode(bpRegistration);
         bpRegistration.setNamespaceInfo(nsInfo);
         break;
@@ -849,6 +854,7 @@ class BPServiceActor implements Runnable {
         // init stuff
         try {
           // setup storage
+          // TODO 向NN注册
           connectToNNAndHandshake();
           break;
         } catch (IOException ioe) {

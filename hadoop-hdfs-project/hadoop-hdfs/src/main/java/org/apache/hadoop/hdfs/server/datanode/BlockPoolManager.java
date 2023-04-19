@@ -172,6 +172,12 @@ class BlockPoolManager {
       // Step 1. For each of the new nameservices, figure out whether
       // it's an update of the set of NNs for an existing NS,
       // or an entirely new nameservice.
+
+      /**
+       * TODO 如果是联邦架构，有多少个联邦就会有多少个namenodeservice
+       * hadoop1, hadoop2 -> 联邦1 service1
+       * hadoop3, hadoop4 -> 联邦2 service2
+       */
       for (String nameserviceId : addrMap.keySet()) {
         if (bpByNameserviceId.containsKey(nameserviceId)) {
           toRefresh.add(nameserviceId);
@@ -200,11 +206,17 @@ class BlockPoolManager {
         for (String nsToAdd : toAdd) {
           ArrayList<InetSocketAddress> addrs =
             Lists.newArrayList(addrMap.get(nsToAdd).values());
+          //TODO 重要关系
+          // 一个联邦对应一个BPOfferService
+          // 一个联邦里面一个NameNode就是一个BPServiceActor
+          // 也就是说正常来说一个BPOfferService 对应两个BPServiceActor
           BPOfferService bpos = createBPOS(addrs);
           bpByNameserviceId.put(nsToAdd, bpos);
           offerServices.add(bpos);
         }
       }
+
+      //TODO Datanode向Namenode进行注册和心跳
       startAll();
     }
 
