@@ -1434,8 +1434,10 @@ public class NameNode implements NameNodeStatusMXBean {
   public static NameNode createNameNode(String argv[], Configuration conf)
       throws IOException {
     LOG.info("createNameNode " + Arrays.asList(argv));
-    if (conf == null)
+    if (conf == null) {
       conf = new HdfsConfiguration();
+      conf.set("fs.defaultFS", "hdfs://localhost/");
+    }
     /**
      * 操作HDFS集群的时候会传进来如下的参数：
      *
