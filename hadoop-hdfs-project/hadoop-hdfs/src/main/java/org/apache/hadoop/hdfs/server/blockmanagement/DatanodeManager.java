@@ -582,6 +582,8 @@ public class DatanodeManager {
 
   /** Is the datanode dead? */
   boolean isDatanodeDead(DatanodeDescriptor node) {
+    // 如果超过10分钟30秒没有心跳，就认为是dead
+    // 超时后会复制副本到新的机器
     return (node.getLastUpdateMonotonic() <
             (monotonicNow() - heartbeatExpireInterval));
   }
@@ -1349,6 +1351,7 @@ public class DatanodeManager {
       synchronized (datanodeMap) {
         DatanodeDescriptor nodeinfo = null;
         try {
+          // 获取node的信息
           nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredNodeException e) {
           return new DatanodeCommand[]{RegisterCommand.REGISTER};
@@ -1360,10 +1363,12 @@ public class DatanodeManager {
           throw new DisallowedDatanodeException(nodeinfo);
         }
 
+        // 如果没有则注册node的信息
         if (nodeinfo == null || !nodeinfo.isAlive) {
           return new DatanodeCommand[]{RegisterCommand.REGISTER};
         }
 
+        // TODO 更新心跳的重要的信息
         heartbeatManager.updateHeartbeat(nodeinfo, reports,
                                          cacheCapacity, cacheUsed,
                                          xceiverCount, failedVolumes,

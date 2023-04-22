@@ -221,6 +221,7 @@ class HeartbeatManager implements DatanodeStatistics {
       int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) {
     stats.subtract(node);
+    // TODO 重要代码
     node.updateHeartbeat(reports, cacheCapacity, cacheUsed,
       xceiverCount, failedVolumes, volumeFailureSummary);
     stats.add(node);
@@ -283,6 +284,7 @@ class HeartbeatManager implements DatanodeStatistics {
       int numOfStaleNodes = 0;
       int numOfStaleStorages = 0;
       synchronized(this) {
+        // TODO 遍历每个datanode
         for (DatanodeDescriptor d : datanodes) {
           if (dead == null && dm.isDatanodeDead(d)) {
             stats.incrExpiredHeartbeats();
@@ -355,6 +357,7 @@ class HeartbeatManager implements DatanodeStatistics {
         try {
           final long now = Time.monotonicNow();
           if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
+            // TODO 心跳检查
             heartbeatCheck();
             lastHeartbeatCheck = now;
           }

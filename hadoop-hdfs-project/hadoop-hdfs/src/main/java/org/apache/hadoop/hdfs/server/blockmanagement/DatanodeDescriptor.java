@@ -453,9 +453,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
           storageMap.values());
     }
 
+    // TODO 更改存储信息
     setCacheCapacity(cacheCapacity);
     setCacheUsed(cacheUsed);
     setXceiverCount(xceiverCount);
+
+    // TODO 修改上一次心跳时间
     setLastUpdate(Time.now());
     setLastUpdateMonotonic(Time.monotonicNow());
     this.volumeFailures = volFailures;

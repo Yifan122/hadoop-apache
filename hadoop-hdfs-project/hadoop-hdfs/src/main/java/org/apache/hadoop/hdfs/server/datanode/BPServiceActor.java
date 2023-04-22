@@ -692,6 +692,7 @@ class BPServiceActor implements Runnable {
         //
         // Every so often, send heartbeat or block-report
         //
+        // TODO 心跳是每三秒发送一次
         if (startTime - lastHeartbeat >= dnConf.heartBeatInterval) {
           //
           // All heartbeat messages include following info:
@@ -702,6 +703,11 @@ class BPServiceActor implements Runnable {
           //
           lastHeartbeat = startTime;
           if (!dn.areHeartbeatsDisabledForTests()) {
+            // Namenode 是不直接跟Datanode进行链接的
+            // DataNode 发送心跳给Namenode
+            // NameNode接收到心跳后，会返回一些命令
+            // Datanode接收到这些命令后，根据这些命令做对应的操作
+            // TODO 发送心跳，返回的是NameNode的响应命令
             HeartbeatResponse resp = sendHeartBeat();
             assert resp != null;
             dn.getMetrics().addHeartbeat(monotonicNow() - startTime);
@@ -721,6 +727,8 @@ class BPServiceActor implements Runnable {
             }
 
             long startProcessCommands = monotonicNow();
+            // TODO 处理namenode返回的指令
+            // 比如删除block，复制block
             if (!processCommand(resp.getCommands()))
               continue;
             long endProcessCommands = monotonicNow();
@@ -877,6 +885,7 @@ class BPServiceActor implements Runnable {
 
       while (shouldRun()) {
         try {
+          // TODO 发送心跳
           offerService();
         } catch (Exception ex) {
           LOG.error("Exception in BPOfferService for " + this, ex);
