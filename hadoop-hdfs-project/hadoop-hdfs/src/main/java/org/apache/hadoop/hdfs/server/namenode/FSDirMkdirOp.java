@@ -43,6 +43,8 @@ class FSDirMkdirOp {
 
   static HdfsFileStatus mkdirs(FSNamesystem fsn, String src,
       PermissionStatus permissions, boolean createParent) throws IOException {
+
+    //TODO FSDirectory目录树
     FSDirectory fsd = fsn.getFSDirectory();
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
@@ -87,6 +89,7 @@ class FSDirMkdirOp {
           List<String> ancestors = nonExisting.subList(0, length - 1);
           // Ensure that the user can traversal the path by adding implicit
           // u+wx permission to all ancestor directories
+          // TODO 创建子目录
           existing = createChildrenDirectories(fsd, existing, ancestors,
               addImplicitUwx(permissions, permissions));
           if (existing == null) {
@@ -188,6 +191,7 @@ class FSDirMkdirOp {
       INodesInPath existing, String localName, PermissionStatus perm)
       throws IOException {
     assert fsd.hasWriteLock();
+    // TODO 往内存中写元数据
     existing = unprotectedMkdir(fsd, fsd.allocateNewInodeId(), existing,
         localName.getBytes(Charsets.UTF_8), perm, null, now());
     if (existing == null) {
@@ -199,6 +203,7 @@ class FSDirMkdirOp {
     // to match count of FilesDeleted metric.
     NameNode.getNameNodeMetrics().incrFilesCreated();
 
+    // TODO 重要，记录元数据
     String cur = existing.getPath();
     fsd.getEditLog().logMkDir(cur, newNode);
     if (NameNode.stateChangeLog.isDebugEnabled()) {

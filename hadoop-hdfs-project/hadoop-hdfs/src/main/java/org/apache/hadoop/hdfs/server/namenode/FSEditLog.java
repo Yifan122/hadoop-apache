@@ -414,17 +414,23 @@ public class FSEditLog implements LogsPurgeable {
    * store yet.
    */
   void logEdit(final FSEditLogOp op) {
+
+    // 加锁
     synchronized (this) {
       assert isOpenForWrite() :
         "bad state: " + state;
       
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
-      
+
+      // TODO 步骤一： 获取当前的独一无二的事务ID
       long start = beginTransaction();
       op.setTransactionId(txid);
 
       try {
+        // TODO 步骤二：写入内存
+        // EditLogFileOutputStream
+        // QuorumOutputStream
         editLogStream.write(op);
       } catch (IOException ex) {
         // All journals failed, it is handled in logSync.
@@ -442,6 +448,7 @@ public class FSEditLog implements LogsPurgeable {
     }
     
     // sync buffered edit log entries to persistent store
+    // TODO 持久化到磁盘
     logSync();
   }
 
@@ -485,6 +492,7 @@ public class FSEditLog implements LogsPurgeable {
     //
     // record the transactionId when new data was written to the edits log
     //
+    // TODO txid本地副本 ThreadLocal
     TransactionId id = myTransactionId.get();
     id.txid = txid;
     return monotonicNow();
@@ -615,6 +623,7 @@ public class FSEditLog implements LogsPurgeable {
           sync = true;
   
           // swap buffers
+          // 交换buffer
           try {
             if (journalSet.isEmpty()) {
               throw new IOException("No journals available to flush");
@@ -632,7 +641,8 @@ public class FSEditLog implements LogsPurgeable {
             terminate(1, msg);
           }
         } finally {
-          // Prevent RuntimeException from blocking other log edit write 
+          // Prevent RuntimeException from blocking other log edit write
+          // TODO 恢复标识位，唤醒等待的线程
           doneWithAutoSyncScheduling();
         }
         //editLogStream may become null,
@@ -797,6 +807,8 @@ public class FSEditLog implements LogsPurgeable {
    */
   public void logMkDir(String path, INode newNode) {
     PermissionStatus permissions = newNode.getPermissionStatus();
+
+    // TODO 创建日志对象 【构建者模式】
     MkdirOp op = MkdirOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)
