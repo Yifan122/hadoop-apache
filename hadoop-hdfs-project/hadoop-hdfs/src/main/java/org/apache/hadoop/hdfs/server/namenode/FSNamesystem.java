@@ -2436,6 +2436,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         src = dir.resolvePath(pc, src, pathComponents);
         final INodesInPath iip = dir.getINodesInPath4Write(src);
+        // TODO 重要代码
         toRemoveBlocks = startFileInternal(
             pc, iip, permissions, holder,
             clientMachine, create, overwrite,
@@ -2561,6 +2562,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Map.Entry<INodesInPath, String> parent = FSDirMkdirOp
           .createAncestorDirectories(dir, iip, permissions);
       if (parent != null) {
+        // TODO 往文件目录树里面添加INodeFile节点
+        // dir就是FSDirectory
         iip = dir.addFile(parent.getKey(), parent.getValue(), permissions,
             replication, blockSize, holder, clientMachine);
         newNode = iip != null ? iip.getLastINode().asFile() : null;
@@ -2569,6 +2572,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (newNode == null) {
         throw new IOException("Unable to add " + src +  " to namespace");
       }
+      // TODO 添加契约
+      // 只有拥有契约的客户端才可以上传数据
+      // 契约会每隔一段时间更新
       leaseManager.addLease(newNode.getFileUnderConstructionFeature()
           .getClientName(), src);
 
@@ -3074,6 +3080,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // choose targets for the new block to be allocated.
+    // TODO 选择存放block的datanode主机 （负载均衡）
+    // HDFS 机架感知
     final DatanodeStorageInfo targets[] = getBlockManager().chooseTarget4NewBlock( 
         src, replication, clientNode, excludedNodes, blockSize, favoredNodes,
         storagePolicyID);

@@ -240,6 +240,9 @@ public class TransferFsImage {
 
   /*
    * Uploads the imagefile using HTTP PUT method
+   *
+   * 10PB的数据
+   * fsimage大概的大小： 1025 * 10 * 1024 = 4G
    */
   private static void uploadImage(URL url, Configuration conf,
       NNStorage storage, NameNodeFile nnf, long txId, Canceler canceler)

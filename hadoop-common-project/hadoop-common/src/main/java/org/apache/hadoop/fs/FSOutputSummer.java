@@ -160,6 +160,8 @@ abstract public class FSOutputSummer extends OutputStream {
     int partialLen = bufLen % sum.getBytesPerChecksum();
     int lenToFlush = flushPartial ? bufLen : bufLen - partialLen;
     if (lenToFlush != 0) {
+      // TODO 核心的代码
+      // TODO HDFS文件 -》 block文件块 （128M） -> packet(64K) = 127chunk -> chunk (512  bytes) + chunk sum (4 bytes)
       writeChecksumChunks(buf, 0, lenToFlush);
       if (!flushPartial || keep) {
         count = partialLen;

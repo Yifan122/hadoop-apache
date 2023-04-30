@@ -57,6 +57,12 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * periodically waking up to take a checkpoint of the namespace.
  * When it takes a checkpoint, it saves it to its local
  * storage and then uploads it to the remote NameNode.
+ *
+ * 命名空间 = 元数据信息 = 目录树 =fsimage
+ *
+ * StandbyCheckpointer 是运行在standBynamenode上的一个线程
+ * 会周期性的对命名空间做checkpoint的操作
+ * 并把这份数据上传到active namenode上
  */
 @InterfaceAudience.Private
 public class StandbyCheckpointer {
@@ -182,6 +188,7 @@ public class StandbyCheckpointer {
       } else {
         imageType = NameNodeFile.IMAGE;
       }
+      // TODO 保存fsimage
       img.saveNamespace(namesystem, imageType, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
@@ -199,6 +206,7 @@ public class StandbyCheckpointer {
     // Upload the saved checkpoint back to the active
     // Do this in a separate thread to avoid blocking transition to active
     // See HDFS-4816
+    // TODO 上传fsimage到active namenode
     ExecutorService executor =
         Executors.newSingleThreadExecutor(uploadThreadFactory);
     Future<Void> upload = executor.submit(new Callable<Void>() {
@@ -320,7 +328,9 @@ public class StandbyCheckpointer {
           }
           
           final long now = monotonicNow();
+          // checkpoint条件一：是否超过1000000 条日志没有被checkpoint
           final long uncheckpointed = countUncheckpointedTxns();
+          // checkpoint条件二：是否超过3600s没有进行checkpoint了
           final long secsSinceLast = (now - lastCheckpointTime) / 1000;
           
           boolean needCheckpoint = needRollbackCheckpoint;

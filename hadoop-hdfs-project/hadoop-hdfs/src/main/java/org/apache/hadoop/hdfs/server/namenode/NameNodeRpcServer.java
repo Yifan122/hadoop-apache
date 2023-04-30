@@ -619,6 +619,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     try {
       PermissionStatus perm = new PermissionStatus(getRemoteUser()
           .getShortUserName(), null, masked);
+      // TODO 核心步骤
       status = namesystem.startFile(src, perm, clientName, clientMachine,
           flag.get(), createParent, replication, blockSize, supportedVersions,
           cacheEntry != null);
@@ -719,6 +720,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     List<String> favoredNodesList = (favoredNodes == null) ? null
         : Arrays.asList(favoredNodes);
+
+      /**
+       * 1） 选择三台dataNode副本机器
+       * 2） 修改了目录树（内存）
+       * 3）存储元数据信息（磁盘）
+       */
     LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, fileId,
         clientName, previous, excludedNodesSet, favoredNodesList);
     if (locatedBlock != null)

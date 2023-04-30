@@ -445,6 +445,11 @@ public class DistributedFileSystem extends FileSystem {
       @Override
       public FSDataOutputStream doCall(final Path p)
           throws IOException, UnresolvedLinkException {
+        /**
+         * 1）往文件目录树里面添加了INodeFile
+         * 2）添加契约管理
+         * 3）启动了DataStreamer （写数据流程的关键服务）
+         */
         final DFSOutputStream dfsos = dfs.create(getPathName(p), permission,
                 cflags, replication, blockSize, progress, bufferSize,
                 checksumOpt);

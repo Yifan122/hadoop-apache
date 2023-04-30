@@ -132,6 +132,7 @@ class DataXceiverServer implements Runnable {
     Peer peer = null;
     while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {
+        // TODO 接受socket 请求
         peer = peerServer.accept();
 
         // Make sure the xceiver count is not exceeded
